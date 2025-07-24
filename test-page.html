@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSSnitch Extension Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-element {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .nested-element {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 id="main-title">CSSnitch Extension Test Page</h1>
+        <p class="description">This page is for testing the CSSnitch Safari extension without conflicts.</p>
+        
+        <div class="test-element" id="test-div">
+            <h2>Test Element 1</h2>
+            <p>Click me to inspect with CSSnitch!</p>
+            <div class="nested-element">
+                <span>Nested element with classes</span>
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button class="test-button" id="btn1">Button 1</button>
+            <button class="test-button" id="btn2">Button 2</button>
+            <button class="test-button" id="btn3">Button 3</button>
+        </div>
+        
+        <div class="test-element">
+            <h3>Another Test Element</h3>
+            <ul>
+                <li class="list-item">List item 1</li>
+                <li class="list-item">List item 2</li>
+                <li class="list-item">List item 3</li>
+            </ul>
+        </div>
+        
+        <footer style="margin-top: 40px; text-align: center; color: #666;">
+            <p>Use Cmd+Ctrl+P to activate CSSnitch inspector, then click any element!</p>
+        </footer>
+    </div>
+</body>
+</html>

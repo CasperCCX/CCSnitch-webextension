@@ -1,33 +1,36 @@
 {
-    "manifest_version": 3,
-    "default_locale": "en",
-
-    "name": "__MSG_extension_name__",
-    "description": "__MSG_extension_description__",
-    "version": "1.0",
-
-    "icons": {
-        "48": "images/icon-48.png",
-        "96": "images/icon-96.png",
-        "128": "images/icon-128.png",
-        "256": "images/icon-256.png",
-        "512": "images/icon-512.png"
-    },
-
-    "background": {
-        "scripts": [ "background.js" ],
-        "type": "module"
-    },
-
-    "content_scripts": [{
-        "js": [ "content.js" ],
-        "matches": [ "*://example.com/*" ]
-    }],
-
-    "action": {
-        "default_popup": "popup.html",
-        "default_icon": "images/toolbar-icon.svg"
-    },
-
-    "permissions": [ ]
+  "manifest_version": 2,
+  "name": "CSSnitch DOM Inspector",
+  "version": "1.0.0",
+  "description": "Live DOM inspection and CSS editing for developers",
+  
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "*://localhost/*",
+    "*://127.0.0.1/*",
+    "*://*.local/*",
+    "*://*.dev/*"
+  ],
+  
+  "content_scripts": [{
+    "matches": [
+      "*://localhost/*",
+      "*://127.0.0.1/*", 
+      "*://*.local/*",
+      "*://*.dev/*"
+    ],
+    "js": ["content.js"],
+    "run_at": "document_end"
+  }],
+  
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": true
+  },
+  
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_title": "CSSnitch DOM Inspector"
+  }
 }
