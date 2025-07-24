@@ -186,18 +186,99 @@ class CSSnitchWebExtension {
   }
   
   detectComponent(element) {
-    // Vue.js component detection
+    console.log('🔍 Starting component detection for:', element.tagName, element.className);
+    
+    // Vue.js component detection - traverse up the DOM tree
     let current = element;
-    while (current && current !== document.body) {
+    let depth = 0;
+    
+    while (current && current !== document.body && depth < 20) {
+      console.log(`🔍 Checking element at depth ${depth}:`, current.tagName, current.className);
+      
+      // Check for Vue 2.x
       if (current.__vue__) {
         const vue = current.__vue__;
+        console.log('✅ Found Vue 2.x component:', vue.$options);
         return {
           file_path: vue.$options.__file || undefined,
           component_name: vue.$options.name || vue.$options._componentTag || undefined,
-          framework: "Vue",
-          css_scope: "scoped", // Assume scoped for now
+          framework: "Vue 2.x",
+          css_scope: "scoped",
           line_number: undefined,
-          css_selector_in_source: this.generateSelector(element)
+          css_selector_in_source: this.generateSelector(current),
+          depth: depth
+        };
+      }
+      
+      // Check for Vue 3.x - multiple possible properties
+      const vue3Props = ['__vueParentComponent', '__vue_app__', '_vnode', '__vnode'];
+      for (const prop of vue3Props) {
+        if (current[prop]) {
+          const vue3 = current[prop];
+          console.log(`✅ Found Vue 3.x via ${prop}:`, vue3);
+          
+          // Try to extract component info from various Vue 3 structures
+          const componentInfo = this.extractVue3ComponentInfo(vue3);
+          if (componentInfo.component_name || componentInfo.file_path) {
+            return {
+              ...componentInfo,
+              framework: "Vue 3.x",
+              css_scope: "scoped",
+              css_selector_in_source: this.generateSelector(current),
+              depth: depth
+            };
+          }
+        }
+      }
+      
+      // Check all properties for Vue-like objects
+      const allProps = Object.getOwnPropertyNames(current);
+      console.log(`🔍 All properties on ${current.tagName}:`, allProps.slice(0, 10)); // Show first 10
+      
+      const vueProps = allProps.filter(prop => 
+        prop.includes('vue') || prop.includes('Vue') || prop.startsWith('_')
+      );
+      
+      if (vueProps.length > 0) {
+        console.log('🔍 Found Vue-related properties:', vueProps);
+        for (const prop of vueProps) {
+          try {
+            const obj = current[prop];
+            if (obj && typeof obj === 'object') {
+              const info = this.extractVue3ComponentInfo(obj);
+              if (info.component_name || info.file_path) {
+                console.log(`✅ Extracted component info from ${prop}:`, info);
+                return {
+                  ...info,
+                  framework: `Vue 3.x (${prop})`,
+                  css_scope: "scoped",
+                  css_selector_in_source: this.generateSelector(current),
+                  depth: depth
+                };
+              }
+            }
+          } catch (e) {
+            // Ignore errors when accessing properties
+          }
+        }
+      }
+      
+      // Check for data-v- attributes (Vue scoped CSS)
+      const vueDataAttrs = Array.from(current.attributes || [])
+        .filter(attr => attr.name.startsWith('data-v-'));
+      
+      if (vueDataAttrs.length > 0) {
+        console.log('✅ Found Vue scoped CSS attributes:', vueDataAttrs.map(a => a.name));
+        return {
+          file_path: undefined,
+          component_name: `Component-${vueDataAttrs[0].name}`,
+          framework: "Vue (scoped CSS)",
+          css_scope: "scoped",
+          line_number: undefined,
+          css_selector_in_source: this.generateSelector(current),
+          depth: depth,
+          vue_scope_id: vueDataAttrs[0].name,
+          all_scope_ids: vueDataAttrs.map(a => a.name)
         };
       }
       
@@ -209,21 +290,71 @@ class CSSnitchWebExtension {
       
       if (reactKey) {
         const react = current[reactKey];
+        console.log('✅ Found React component:', react);
         return {
           file_path: react._debugSource?.fileName || undefined,
           component_name: react.type?.name || react.elementType?.name || undefined,
           framework: "React",
           css_scope: "module",
           line_number: react._debugSource?.lineNumber || undefined,
-          css_selector_in_source: this.generateSelector(element)
+          css_selector_in_source: this.generateSelector(current),
+          depth: depth
         };
       }
       
       current = current.parentElement;
+      depth++;
     }
     
+    console.log('❌ No component detected after checking', depth, 'levels');
     return null; // No component detected
   }
+  
+  extractVue3ComponentInfo(vueObj) {
+    const info = {
+      file_path: undefined,
+      component_name: undefined,
+      line_number: undefined
+    };
+    
+    try {
+      // Try various Vue 3 component info locations
+      const paths = [
+        'type.__file', 'type.name', 'type.__name',
+        'component.__file', 'component.name', 'component.__name',
+        'ctx.type.__file', 'ctx.type.name', 'ctx.type.__name',
+        'parent.type.__file', 'parent.type.name', 'parent.type.__name',
+        '__file', 'name', '__name'
+      ];
+      
+      for (const path of paths) {
+        const value = this.getNestedProperty(vueObj, path);
+        if (value) {
+          if (path.includes('__file')) {
+            info.file_path = value;
+          } else if (path.includes('name')) {
+            info.component_name = value;
+          }
+        }
+      }
+      
+      console.log('🔍 Extracted Vue component info:', info);
+    } catch (e) {
+      console.log('⚠️ Error extracting Vue component info:', e);
+    }
+    
+    return info;
+  }
+  
+  getNestedProperty(obj, path) {
+    try {
+      return path.split('.').reduce((current, key) => current?.[key], obj);
+    } catch (e) {
+      return undefined;
+    }
+  }
+  
+
   
   getAttributes(element) {
     const attrs = {};
