@@ -173,15 +173,20 @@ class CSSnitchWebExtension {
   }
   
   extractDOMData(element) {
+    console.log('🔍 Extracting complete DOM data for:', element.tagName);
+    
     return {
       tag_name: element.tagName.toLowerCase(),
       id: element.id || undefined,
       class_name: element.className || undefined,
       attributes: this.getAttributes(element),
-      text_content: element.textContent?.trim().substring(0, 100) || undefined,
-      children: [], // We'll keep this simple for now
+      text_content: this.getDirectTextContent(element),
+      inner_html: element.innerHTML,
+      children: this.extractAllChildren(element),
       css_selector: this.generateSelector(element),
-      computed_styles: this.getComputedStyles(element)
+      computed_styles: this.getAllComputedStyles(element),
+      dimensions: this.getElementDimensions(element),
+      position: this.getElementPosition(element)
     };
   }
   
@@ -365,25 +370,99 @@ class CSSnitchWebExtension {
   }
   
   getComputedStyles(element) {
+    // Keep the old method for backward compatibility
+    return this.getAllComputedStyles(element);
+  }
+  
+  getAllComputedStyles(element) {
     const computed = window.getComputedStyle(element);
     const styles = {};
     
-    // Important CSS properties to capture
-    const importantProps = [
-      'color', 'background-color', 'font-size', 'font-weight', 'font-family',
-      'padding', 'margin', 'border', 'border-radius', 'width', 'height',
-      'display', 'position', 'top', 'left', 'right', 'bottom',
-      'flex-direction', 'justify-content', 'align-items', 'gap'
-    ];
-    
-    importantProps.forEach(prop => {
-      const value = computed.getPropertyValue(prop);
-      if (value && value !== 'none' && value !== 'auto') {
-        styles[prop] = value;
+    // Get ALL computed style properties (200+ properties)
+    for (let i = 0; i < computed.length; i++) {
+      const property = computed[i];
+      const value = computed.getPropertyValue(property);
+      
+      // Skip empty values and browser-specific defaults
+      if (value && 
+          value !== 'none' && 
+          value !== 'auto' && 
+          value !== 'normal' && 
+          value !== 'initial' &&
+          value !== '0px' &&
+          !property.startsWith('-webkit-') &&
+          !property.startsWith('-moz-')) {
+        styles[property] = value;
       }
-    });
+    }
     
+    console.log(`📊 Captured ${Object.keys(styles).length} computed styles`);
     return styles;
+  }
+  
+  extractAllChildren(element) {
+    const children = [];
+    
+    // Recursively extract ALL child elements
+    for (let child of element.children) {
+      const childData = {
+        tag_name: child.tagName.toLowerCase(),
+        id: child.id || undefined,
+        class_name: child.className || undefined,
+        attributes: this.getAttributes(child),
+        text_content: this.getDirectTextContent(child),
+        computed_styles: this.getAllComputedStyles(child),
+        dimensions: this.getElementDimensions(child),
+        position: this.getElementPosition(child),
+        children: this.extractAllChildren(child) // Recursive!
+      };
+      
+      children.push(childData);
+    }
+    
+    console.log(`👶 Extracted ${children.length} direct children`);
+    return children;
+  }
+  
+  getDirectTextContent(element) {
+    // Get only the direct text content, not from children
+    let text = '';
+    for (let node of element.childNodes) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        text += node.textContent;
+      }
+    }
+    return text.trim() || undefined;
+  }
+  
+  getElementDimensions(element) {
+    const rect = element.getBoundingClientRect();
+    return {
+      width: rect.width,
+      height: rect.height,
+      offset_width: element.offsetWidth,
+      offset_height: element.offsetHeight,
+      client_width: element.clientWidth,
+      client_height: element.clientHeight,
+      scroll_width: element.scrollWidth,
+      scroll_height: element.scrollHeight
+    };
+  }
+  
+  getElementPosition(element) {
+    const rect = element.getBoundingClientRect();
+    return {
+      top: rect.top,
+      left: rect.left,
+      right: rect.right,
+      bottom: rect.bottom,
+      x: rect.x,
+      y: rect.y,
+      offset_top: element.offsetTop,
+      offset_left: element.offsetLeft,
+      scroll_top: element.scrollTop,
+      scroll_left: element.scrollLeft
+    };
   }
   
   generateSelector(element) {
